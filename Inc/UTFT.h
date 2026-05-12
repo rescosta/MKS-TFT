@@ -132,6 +132,8 @@ class UTFT : public Print
 {
 public:
 	void InitLCD(DisplayOrientation po);
+	uint16_t readDeviceID();
+	void setBacklightBrightness(uint8_t percent);  // 0-100, usa TIM4_CH3 PWM (PD14)
 	void fillScr(Colour c, uint16_t leftMargin = 0);
 	void drawPixel(int x, int y);
 	void drawLine(int x1, int y1, int x2, int y2);

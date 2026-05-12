@@ -47,7 +47,7 @@
 
 const uint32_t DefaultBaudRate = 57600;
 
-const DisplayOrientation DefaultDisplayOrientAdjust = static_cast<DisplayOrientation> (Landscape);
+const DisplayOrientation DefaultDisplayOrientAdjust = static_cast<DisplayOrientation> (ReverseX|SwapXY);
 const DisplayOrientation DefaultTouchOrientAdjust = static_cast<DisplayOrientation> (Default);
 
 // Controlling constants
@@ -102,7 +102,7 @@ const ColourScheme *colours = &colourSchemes[0];
 
 struct EEPROMData
 {
-	static const uint32_t magicVal = 0x3AB629D2;
+	static const uint32_t magicVal = 0x3AB629D7;
 	static const uint32_t muggleVal = 0xFFFFFFFF;
 
 	uint32_t magic;
@@ -1115,6 +1115,8 @@ extern "C" int PanelDueMain(void)
 	lcd.drawCompressedBitmapBottomToTop(0, 0, DISPLAY_X, DISPLAY_Y, splashScreenImage);
 	osDelay(3000);								// hold it there for 5 seconds
 #endif
+
+	lcd.setBacklightBrightness(100);
 
 	mgr.Refresh(true);								// draw the screen for the first time
 	UI::UpdatePrintingFields();

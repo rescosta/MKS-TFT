@@ -249,6 +249,48 @@ void UTFT::LCD_Write_COM_DATA8(uint8_t com1, uint8_t dat1)
      LCD_Write_DATA8(dat1);
 }
 
+uint16_t UTFT::readDeviceID()
+{
+#if defined(STM32F107xC) && defined(MKS_TFT)
+	uint32_t savedCRL = GPIOE->CRL;
+	uint32_t savedCRH = GPIOE->CRH;
+
+	HAL_GPIO_WritePin(LCD_nCS_GPIO_Port, LCD_nCS_Pin, GPIO_PIN_RESET);
+
+	LCD_Write_COM(0x00);  // register 0x00 = driver code read
+
+	// switch to data phase (RS high)
+	HAL_GPIO_WritePin(LCD_RS_GPIO_Port, LCD_RS_Pin, GPIO_PIN_SET);
+
+	// reconfigure GPIOE as input floating (STM32F1: CNF=01 MODE=00 â†’ nibble=0x4)
+	GPIOE->CRL = 0x44444444;
+	GPIOE->CRH = 0x44444444;
+
+	// dummy read cycle (many ILI controllers return garbage on first read)
+	GPIOD->BSRR = (uint32_t)LCD_nRD_Pin << 16;  // nRD low
+	for (volatile int i = 0; i < 50; i++) { __NOP(); }
+	volatile uint16_t dummy = GPIOE->IDR;
+	(void)dummy;
+	GPIOD->BSRR = LCD_nRD_Pin;  // nRD high
+	for (volatile int i = 0; i < 20; i++) { __NOP(); }
+
+	// actual read cycle
+	GPIOD->BSRR = (uint32_t)LCD_nRD_Pin << 16;  // nRD low
+	for (volatile int i = 0; i < 50; i++) { __NOP(); }
+	uint16_t id = GPIOE->IDR;
+	GPIOD->BSRR = LCD_nRD_Pin;  // nRD high
+
+	// restore GPIOE output mode
+	GPIOE->CRL = savedCRL;
+	GPIOE->CRH = savedCRH;
+
+	HAL_GPIO_WritePin(LCD_nCS_GPIO_Port, LCD_nCS_Pin, GPIO_PIN_SET);
+	return id;
+#else
+	return 0xFFFF;
+#endif
+}
+
 void UTFT::InitLCD(DisplayOrientation po)
 {
 	orient = po;
@@ -274,29 +316,38 @@ void UTFT::InitLCD(DisplayOrientation po)
 	uint16_t R01h, R03h, R60h;
 
 	switch (orient) {
+	case (DisplayOrientation::ReverseX|DisplayOrientation::SwapXY):
+		R01h = (0 << 8) | (0 << 10);// SS = 0, SM = 0,  from S1 to S720
+		R03h = (1 << 12) | (1 << 5) | (1 << 4) | (1 << 3);// BGR=1, I/D[1:0]=11, AM=1
+		R60h = (0 << 15) | (0x27 << 8);	// GS=0 (G1 to G320), NL=0x27
+		break;
 	case DisplayOrientation::SwapXY:
 		R01h = (0 << 8) | (0 << 10);// SS = 0, SM = 0,  from S1 to S720 (see also  GS bit (R60h))
-		R03h = (1 << 12) | (1 << 5) | (1 << 4) | (1 << 3);// TRI=0, DFM=0, BGR=1, ORG=0, I/D[1:0]=11, AM=1
+		R03h = (0 << 12) | (1 << 5) | (1 << 4) | (1 << 3);// TRI=0, DFM=0, BGR=0, ORG=0, I/D[1:0]=11, AM=1
 		R60h = (1 << 15) | (0x27 << 8);	// Gate Scan Control (R60h) GS=1(G320) NL[5:0]=0x27 (320 lines)
 		break;
 	case (DisplayOrientation::ReverseY|DisplayOrientation::SwapXY):
 		R01h = (1 << 8) | (0 << 10);// SS = 1, SM = 0,  from S720 to S1 (see also  GS bit (R60h))
-		R03h = (1 << 12) | (1 << 5) | (1 << 4) | (1 << 3);// TRI=0, DFM=0, BGR=1, ORG=0, I/D[1:0]=11, AM=1
+		R03h = (0 << 12) | (1 << 5) | (1 << 4) | (1 << 3);// TRI=0, DFM=0, BGR=0, ORG=0, I/D[1:0]=11, AM=1
 		R60h = (0 << 15) | (0x27 << 8);	// Gate Scan Control (R60h) GS=0(G1) NL[5:0]=0x27 (320 lines)
 		break;
 	case DisplayOrientation::ReverseY:
 		R01h = (0 << 8) | (0 << 10);// SS = 0, SM = 0,  from S1 to S720 (see also  GS bit (R60h))
-		R03h = (1 << 12) | (1 << 5) | (1 << 4) | (0 << 3);// TRI=0, DFM=0, BGR=1, ORG=0, I/D[1:0]=11, AM=0
+		R03h = (0 << 12) | (1 << 5) | (1 << 4) | (0 << 3);// TRI=0, DFM=0, BGR=0, ORG=0, I/D[1:0]=11, AM=0
 		R60h = (0 << 15) | (0x27 << 8);	// Gate Scan Control (R60h) GS=0(G1) NL[5:0]=0x27 (320 lines)
 		break;
 	case DisplayOrientation::Default:
 	default:
 		R01h = (1 << 8) | (0 << 10);// SS = 1, SM = 0,  from S720 to S1 (see also  GS bit (R60h))
-		R03h = (1 << 12) | (0 << 5) | (1 << 4) | (0 << 3);// TRI=0, DFM=0, BGR=1, ORG=0, I/D[1:0]=01, AM=0
+		R03h = (0 << 12) | (0 << 5) | (1 << 4) | (0 << 3);// TRI=0, DFM=0, BGR=0, ORG=0, I/D[1:0]=01, AM=0
 		R60h = (1 << 15) | (0x27 << 8);	// Gate Scan Control (R60h) GS=1(G320) NL[5:0]=0x27 (320 lines)
 		break;
 	}
 
+ #if defined(ILI9328) && defined(R61505)
+	LCD_Write_COM_DATA16(0x00E5, 0x8000);         // R61505 startup
+	LCD_Write_COM_DATA16(0x0000, 0x0001);         // Start oscillator
+ #endif
 	LCD_Write_COM_DATA16(0x0001, R01h);			 // Driver Output Control Register (R01h)
 	LCD_Write_COM_DATA16(0x0002, 0x0700);		 // LCD Driving Waveform Control (R02h)
 	LCD_Write_COM_DATA16(0x0003, R03h);			 // Entry Mode (R03h)
@@ -311,34 +362,54 @@ void UTFT::InitLCD(DisplayOrientation po)
 	LCD_Write_COM_DATA16(0x0012, 0x0000);         // Power Control 3 (R12h)
 	LCD_Write_COM_DATA16(0x0013, 0x0000);         // Power Control 4 (R13h)
 
-	osDelay(20);
+	osDelay(50);
  #if defined(ILI9328)
+  #if defined(R61505)
+	LCD_Write_COM_DATA16(0x0010, 0x17B0);         // Power Control 1: SAP=1, BT=7, APE=1, AP=5
+	osDelay(50);
+	LCD_Write_COM_DATA16(0x0011, 0x0037);         // Power Control 2: DC1=3, DC0=0, VC=7
+	osDelay(10);
+	LCD_Write_COM_DATA16(0x0012, 0x0138);         // Power Control 3: VRH=8, PON=1, VCIRE=1
+	osDelay(10);
+	LCD_Write_COM_DATA16(0x0013, 0x1700);         // Power Control 4: VDV=23
+	LCD_Write_COM_DATA16(0x0029, 0x001F);         // VCOMH=31
+	osDelay(50);
+  #else
 	LCD_Write_COM_DATA16(0x0010, 0x14B0);         // Power Control 1 (R10h)
-	osDelay(5);
+	osDelay(50);
 	LCD_Write_COM_DATA16(0x0011, 0x0007);         // Power Control 2 (R11h)
 	osDelay(5);
-	LCD_Write_COM_DATA16(0x0012, 0x008E);         // Power Control 3 (R12h)
+	LCD_Write_COM_DATA16(0x0012, 0x008E);         // Power Control 3 (R12h) PON=1
 	LCD_Write_COM_DATA16(0x0013, 0x0C00);         // Power Control 4 (R13h)
+	osDelay(50);
+	LCD_Write_COM_DATA16(0x0029, 0x0015);         // NVM read data 2 (R29h) VCOMH
+	osDelay(50);
+  #endif
 
-	LCD_Write_COM_DATA16(0x0029, 0x0015);         // NVM read data 2 (R29h)
-	osDelay(5);
-
-	LCD_Write_COM_DATA16(0x0030, 0x0000);         // Gamma Control 1
-	LCD_Write_COM_DATA16(0x0031, 0x0107);         // Gamma Control 2
-	LCD_Write_COM_DATA16(0x0032, 0x0000);         // Gamma Control 3
-	LCD_Write_COM_DATA16(0x0035, 0x0203);         // Gamma Control 4
-	LCD_Write_COM_DATA16(0x0036, 0x0402);         // Gamma Control 5
-	LCD_Write_COM_DATA16(0x0037, 0x0000);         // Gamma Control 6
-	LCD_Write_COM_DATA16(0x0038, 0x0207);         // Gamma Control 7
+	LCD_Write_COM_DATA16(0x0030, 0x0707);         // Gamma Control 1
+	LCD_Write_COM_DATA16(0x0031, 0x0007);         // Gamma Control 2
+	LCD_Write_COM_DATA16(0x0032, 0x0603);         // Gamma Control 3
+ #if defined(R61505)
+	LCD_Write_COM_DATA16(0x0033, 0x0700);         // Gamma Control (R61505)
+	LCD_Write_COM_DATA16(0x0034, 0x0202);         // Gamma Control (R61505)
+ #endif
+	LCD_Write_COM_DATA16(0x0035, 0x0002);         // Gamma Control 4
+	LCD_Write_COM_DATA16(0x0036, 0x1F0F);         // Gamma Control 5 (VRP1=31 max)
+	LCD_Write_COM_DATA16(0x0037, 0x0707);         // Gamma Control 6
+	LCD_Write_COM_DATA16(0x0038, 0x0000);         // Gamma Control 7
 	LCD_Write_COM_DATA16(0x0039, 0x0000);         // Gamma Control 8
-	LCD_Write_COM_DATA16(0x003c, 0x0203);         // Gamma Control 9
-	LCD_Write_COM_DATA16(0x003d, 0x0403);         // Gamma Control 10
+ #if defined(R61505)
+	LCD_Write_COM_DATA16(0x003a, 0x0707);         // Gamma Control (R61505)
+	LCD_Write_COM_DATA16(0x003b, 0x0000);         // Gamma Control (R61505)
+ #endif
+	LCD_Write_COM_DATA16(0x003c, 0x0007);         // Gamma Control 9
+	LCD_Write_COM_DATA16(0x003d, 0x0000);         // Gamma Control 10
 
  #elif defined(ILI9325)
     LCD_Write_COM_DATA16(0x0010, 0x1590);	      // Power Control 1 (R10h)
     /**
      * AP[2:0]=1 (1.00)
-     * APE = Ó1Ô to start the generation of power supply according to the power supply startup sequence
+     * APE = ï¿½1ï¿½ to start the generation of power supply according to the power supply startup sequence
      * BT[3:0]=5 DDVDH=Vci1 x2 VCL=-Vci1 VGH=Vci1 x5 VGL=-Vci1 x3
      **/
     LCD_Write_COM_DATA16(0x0011, 0x0227);		  // VC[2:0]=7 (1.0xVci), DC0[2:0]=2(Fosc/4), DC1[2:0]=2(Fosc/16)
@@ -371,7 +442,11 @@ void UTFT::InitLCD(DisplayOrientation po)
 	LCD_Write_COM_DATA16(0x0053, 319);			  // Window Vertical RAM Address End (R53h)
 
 	LCD_Write_COM_DATA16(0x0060, R60h);			  // Driver Output Control (R60h)
-	LCD_Write_COM_DATA16(0x0061, 0x0001);		  // Driver Output Control (R61h)
+ #if defined(R61505)
+	LCD_Write_COM_DATA16(0x0061, 0x0001);		  // Driver Output Control (R61h) REV=1
+ #else
+	LCD_Write_COM_DATA16(0x0061, 0x0000);		  // Driver Output Control (R61h) REV=0
+ #endif
  #if defined(ILI9328)
     LCD_Write_COM_DATA16(0x006a, 0x0000);
 
@@ -383,16 +458,28 @@ void UTFT::InitLCD(DisplayOrientation po)
     LCD_Write_COM_DATA16(0x0085, 0x0000);
  #endif
 	LCD_Write_COM_DATA16(0x0090, 0x0010);		  // Panel Interface Control 1 (R90h)
- #if defined(ILI9325)
-    /**
-      *  RTNI[4:0]=10000b (16 clocks) DIVI[1:0]=0 (fosc/1)
-      **/
+ #if defined(R61505)
+	LCD_Write_COM_DATA16(0x0092, 0x0000);
+	LCD_Write_COM_DATA16(0x0093, 0x0003);
+	LCD_Write_COM_DATA16(0x0095, 0x0101);
+	LCD_Write_COM_DATA16(0x0097, 0x0000);
+	LCD_Write_COM_DATA16(0x0098, 0x0000);
+ #elif defined(ILI9325)
     LCD_Write_COM_DATA16(0x0092, 0x0000);         // Panel Interface Control 2 (R92h) NOWI[2:0]=0 (o clk)
     LCD_Write_COM_DATA16(0x0095, 0x0110);	      // Panel Interface Control 4 (R95h) (RGB interface mode)
     LCD_Write_COM_DATA16(0x0097, 0x0000);	      // Panel Interface Control 5 (R97h) (RGB interface mode)
  #endif
+ #if defined(R61505)
+	LCD_Write_COM_DATA16(0x0007, 0x0021);
+	osDelay(50);
+	LCD_Write_COM_DATA16(0x0007, 0x0031);
+	osDelay(50);
+	LCD_Write_COM_DATA16(0x0007, 0x0173);
+	osDelay(10);
+ #else
 	LCD_Write_COM_DATA16(0x0007, 0x0133);		  // Display Control 1 (R07h) W,
 	osDelay(10);
+ #endif
 #endif  /* defined(ILI9325) || defined(ILI9328) */
 
 #if defined(SSD1963_50) || defined(SSD1963_70)
@@ -479,9 +566,44 @@ void UTFT::InitLCD(DisplayOrientation po)
 	setColor(0xFFFF);
 	setBackColor(0);
 #if defined(STM32F107xC) && defined(MKS_TFT)
-	// turn on backlight
-	HAL_GPIO_WritePin(LCD_BACKLIGHT_GPIO_Port, LCD_BACKLIGHT_Pin, GPIO_PIN_SET);
+	setBacklightBrightness(100);
 	HAL_GPIO_WritePin(LCD_nCS_GPIO_Port, LCD_nCS_Pin, GPIO_PIN_SET);
+#endif
+}
+
+void UTFT::setBacklightBrightness(uint8_t percent)
+{
+#if defined(STM32F107xC) && defined(MKS_TFT)
+	if (percent == 0) {
+		HAL_GPIO_WritePin(LCD_BACKLIGHT_GPIO_Port, LCD_BACKLIGHT_Pin, GPIO_PIN_RESET);
+		return;
+	}
+
+	// PD14 = TIM4_CH3 com remap completo (AFIO)
+	__HAL_RCC_TIM4_CLK_ENABLE();
+	__HAL_AFIO_REMAP_TIM4_ENABLE();
+
+	GPIO_InitTypeDef gInit = {};
+	gInit.Pin   = LCD_BACKLIGHT_Pin;
+	gInit.Mode  = GPIO_MODE_AF_PP;
+	gInit.Speed = GPIO_SPEED_FREQ_LOW;
+	HAL_GPIO_Init(LCD_BACKLIGHT_GPIO_Port, &gInit);
+
+	static TIM_HandleTypeDef htim4bl;
+	htim4bl.Instance               = TIM4;
+	htim4bl.Init.Prescaler         = 71;           // 72 MHz / 72 = 1 MHz
+	htim4bl.Init.CounterMode       = TIM_COUNTERMODE_UP;
+	htim4bl.Init.Period            = 999;           // 1 MHz / 1000 = 1 kHz PWM
+	htim4bl.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+	HAL_TIM_PWM_Init(&htim4bl);
+
+	TIM_OC_InitTypeDef oc = {};
+	oc.OCMode     = TIM_OCMODE_PWM1;
+	oc.Pulse      = (uint32_t)percent * 10;        // 0-100 â†’ 0-1000 ticks
+	oc.OCPolarity = TIM_OCPOLARITY_HIGH;
+	oc.OCFastMode = TIM_OCFAST_DISABLE;
+	HAL_TIM_PWM_ConfigChannel(&htim4bl, &oc, TIM_CHANNEL_3);
+	HAL_TIM_PWM_Start(&htim4bl, TIM_CHANNEL_3);
 #endif
 }
 
