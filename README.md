@@ -1,84 +1,86 @@
-# MKS TFT28 V2.0 — Firmware PanelDue para Klipper/Voron 2.4
+# MKS TFT28 V2.0 — PanelDue Firmware for Klipper / Voron 2.4
+
+> [Versão em Português](README.pt-br.md)
 
 ## Hardware
 
-| Item | Valor |
+| Item | Value |
 |------|-------|
 | Board | MKS TFT28 V2.0 (silk screen: MKS TFT32_L V3.0) |
-| MCU | STM32F107VCT6 (chipid 0x418, Cortex-M3, 256KB flash) |
+| MCU | STM32F107VCT6 (chipid 0x418, Cortex-M3, 256 KB flash) |
 | Display | H685, 320×240, TN normally-white |
-| Controlador LCD | **R61505** (ID=0x1505 lido via R00h) |
+| LCD controller | **R61505** (ID=0x1505 read via R00h) |
 | Touch | XPT2046 via SPI3 |
-| EEPROM | I2C físico (separado da flash STM32) |
-| Protocolo | PanelDue (robotsrulz/MKS-TFT base) |
+| EEPROM | Physical I2C chip (separate from STM32 flash) |
+| Protocol | PanelDue (based on robotsrulz/MKS-TFT) |
 
 ---
 
-## Como gravar
+## Flashing
 
 ```bash
 openocd -f interface/stlink.cfg -f target/stm32f1x.cfg \
-  -c "program MKS-TFT32_voron24_klipper.bin verify reset exit 0x08000000"
+  -c "program binaries/MKS-TFT32_voron24_klipper.bin verify reset exit 0x08000000"
 ```
 
-**Importante:** usar OpenOCD com comando `program` — não usar `st-flash` diretamente.
+> **Important:** use OpenOCD with the `program` command — do **not** use `st-flash` directly.
 
 ---
 
-## Conexão com Klipper
+## Connecting to Klipper
 
-### 1. Fiação física
+### 1. Physical wiring
 
-O MKS TFT28 V2.0 possui um conector serial de 4 pinos (TTL 3.3V) identificado como **EXP** ou **RS232** na placa:
+The MKS TFT28 V2.0 has a 4-pin serial connector (TTL 3.3 V) labeled **EXP** or **RS232** on the board:
 
-| Pino TFT28 | Sinal | Conecta em |
-|------------|-------|------------|
-| TX | Transmite dados | RX do Raspberry Pi / SBC |
-| RX | Recebe dados | TX do Raspberry Pi / SBC |
-| GND | Terra | GND do Raspberry Pi / SBC |
-| 5V / 3.3V | Alimentação | (opcional — pode alimentar pelo próprio conector da impressora) |
+| TFT28 pin | Signal | Connect to |
+|-----------|--------|------------|
+| TX | Transmit | RX of Raspberry Pi / SBC |
+| RX | Receive | TX of Raspberry Pi / SBC |
+| GND | Ground | GND of Raspberry Pi / SBC |
+| 5V / 3.3V | Power | (optional — can power from printer connector) |
 
-> **Atenção:** TX do TFT vai no RX do Pi e vice-versa. Níveis TTL 3.3V — não conectar em porta RS232 de 12V.
+> **Note:** TX of the TFT goes to RX of the Pi and vice-versa. TTL 3.3 V levels — do **not** connect to a 12 V RS232 port.
 
-#### Opção A — UART GPIO do Raspberry Pi
+#### Option A — Raspberry Pi GPIO UART
 
-Conectar TX/RX/GND nos pinos físicos do GPIO:
+Connect TX / RX / GND to the GPIO header:
 
-| GPIO Pi | Pino físico | Função |
-|---------|------------|--------|
-| GPIO14 | Pino 8 | TXD (→ RX do TFT) |
-| GPIO15 | Pino 10 | RXD (← TX do TFT) |
-| GND | Pino 6 ou 14 | GND |
+| Pi GPIO | Physical pin | Function |
+|---------|-------------|----------|
+| GPIO14 | Pin 8 | TXD (→ TFT RX) |
+| GPIO15 | Pin 10 | RXD (← TFT TX) |
+| GND | Pin 6 or 14 | GND |
 
-Dispositivo serial resultante: `/dev/ttyAMA0` (Pi 3/4) ou `/dev/ttyS0`
+Resulting serial device: `/dev/ttyAMA0` (Pi 3/4) or `/dev/ttyS0`
 
-Habilitar UART no Pi (se necessário):
+Enable UART on the Pi if needed:
 ```bash
 # /boot/config.txt
 enable_uart=1
-dtoverlay=disable-bt   # libera UART0 do Bluetooth (Pi 3/4)
+dtoverlay=disable-bt   # frees UART0 from Bluetooth (Pi 3/4)
 ```
 
-#### Opção B — Adaptador USB-TTL
+#### Option B — USB-TTL adapter
 
-Conectar via adaptador USB-to-serial (CP2102, CH340, FTDI). O dispositivo aparece como `/dev/ttyUSB0` ou similar.
+Connect via a USB-to-serial adapter (CP2102, CH340, FTDI). The device will appear as `/dev/ttyUSB0` or similar.
 
-#### Identificar o serial correto
+#### Identifying the correct serial port
 
 ```bash
 ls /dev/tty{USB,AMA,S}*
-# ou
+# or
 dmesg | grep tty
 ```
 
 ---
 
-### 2. Configuração Moonraker
+### 2. Moonraker configuration
 
 ```ini
 # moonraker.conf
 [paneldue]
-serial: /dev/ttyS5        # ajustar conforme o dispositivo detectado
+serial: /dev/ttyAMA0      # adjust to your detected device
 baud: 57600
 machine_name: Voron 2.4
 macros:
@@ -91,19 +93,19 @@ confirmed_macros:
 
 ---
 
-### 3. Configuração printer.cfg
+### 3. printer.cfg macros
 
-Adicionar ao `printer.cfg`:
+Add to `printer.cfg`:
 
 ```ini
-# Macro obrigatória para o PanelDue emitir bips
+# Required for PanelDue beep support
 [gcode_macro PANELDUE_BEEP]
 gcode:
     {% set FREQUENCY = params.FREQUENCY|default(300)|int %}
     {% set DURATION = params.DURATION|default(1.0)|float %}
     M300 S{FREQUENCY} P{(DURATION * 1000)|int}
 
-# Macros opcionais — aparecem nos botões de macro do PanelDue
+# Optional — appear as macro buttons on the PanelDue
 [gcode_macro LOAD_FILAMENT]
 gcode:
     M83
@@ -119,116 +121,114 @@ gcode:
     M82
 ```
 
-> Se a impressora não tiver buzzer (`M300`), a macro `PANELDUE_BEEP` pode ficar vazia — o PanelDue funciona normalmente sem som.
+> If your printer has no buzzer (`M300`), `PANELDUE_BEEP` can be left empty — the PanelDue works fine without audio.
 
 ---
 
-### 4. Reiniciar serviços
+### 4. Restart services
 
 ```bash
 sudo systemctl restart moonraker
 sudo systemctl restart klipper
 ```
 
-O display deve mostrar **"Connecting"** por alguns segundos e depois exibir os dados da impressora (temperatura, posição, etc.).
+The display should show **"Connecting"** for a few seconds, then show printer data (temperatures, position, etc.).
 
 ---
 
-## Registradores R61505 — configuração final
+## R61505 register values — final configuration
 
-Valores extraídos por disassembly ARM Thumb-2 do firmware original MKS (mkstft28.bin v3.0.2).
+Values extracted by ARM Thumb-2 disassembly of the original MKS firmware (mkstft28.bin v3.0.2).
 
-### Startup (antes de R01h)
+### Startup (before R01h)
 
-| Registrador | Valor | Descrição |
-|-------------|-------|-----------|
-| R0E5h | 0x8000 | Startup R61505 (proprietário) |
+| Register | Value | Description |
+|----------|-------|-------------|
+| R0E5h | 0x8000 | R61505 proprietary startup command |
 | R00h  | 0x0001 | Start oscillator |
 
 ### Power
 
-| Registrador | Valor | Descrição |
-|-------------|-------|-----------|
+| Register | Value | Description |
+|----------|-------|-------------|
 | R10h | 0x17B0 | Power Control 1: SAP=1, BT=7, APE=1 |
 | R11h | 0x0037 | Power Control 2: DC1=3, DC0=0, VC=7 |
 | R12h | 0x0138 | Power Control 3: VRH=8, PON=1, VCIRE=1 |
 | R13h | 0x1700 | Power Control 4: VDV=23 |
 | R29h | 0x001F | VCOMH=31 |
-| R61h | 0x0001 | REV=1 (polaridade invertida) |
+| R61h | 0x0001 | REV=1 (inverted LC drive polarity — **critical for vivid colors**) |
+
+> `R61h REV=1` is **not documented** in any public R61505 datasheet. It was found only by disassembly of the original MKS binary and is the key to correct color rendering on the H685 panel.
 
 ### Gamma (R30h–R3Dh)
 
 ```
 R30h=0x0707  R31h=0x0007  R32h=0x0603
-R33h=0x0700  R34h=0x0202  (R61505 não-documentados)
+R33h=0x0700  R34h=0x0202  (R61505 non-standard, undocumented)
 R35h=0x0002
-R36h=0x1F0F  (VRP1=31 — amplitude máxima)
+R36h=0x1F0F  (VRP1=31 — maximum gamma amplitude)
 R37h=0x0707  R38h=0x0000  R39h=0x0000
-R3Ah=0x0707  R3Bh=0x0000  (R61505 não-documentados)
+R3Ah=0x0707  R3Bh=0x0000  (R61505 non-standard, undocumented)
 R3Ch=0x0007  R3Dh=0x0000
 ```
 
-### Panel Interface
+### Panel interface
 
 ```
 R90h=0x0010  R92h=0x0000  R93h=0x0003
 R95h=0x0101  R97h=0x0000  R98h=0x0000
 ```
 
-### Display turn-on (R07h)
+### Display turn-on sequence (R07h)
 
 ```
-R07h=0x0021 → delay 50ms → R07h=0x0031 → delay 50ms → R07h=0x0173
+R07h=0x0021 → delay 50 ms → R07h=0x0031 → delay 50 ms → R07h=0x0173
 ```
 
-### Orientação e BGR
+### Orientation and BGR
 
-| Parâmetro | Valor |
+| Parameter | Value |
 |-----------|-------|
 | DisplayOrientation | ReverseX \| SwapXY (0x03) |
 | R01h | SS=0, SM=0 |
 | R03h | AM=1, BGR=1 (bit 12), I/D=11 |
-| R60h | GS=0, NL=0x27 (320 linhas) |
+| R60h | GS=0, NL=0x27 (320 lines) |
 
 ---
 
 ## Touch
 
-- Controlador: XPT2046 via SPI3
-- Orientação padrão: SwapXY (0x01)
-- Calibração salva no EEPROM (magicVal=0x3AB629D7)
-- A calibração persiste entre gravações (EEPROM não é apagado pelo mass erase)
+- Controller: XPT2046 via SPI3
+- Default orientation: SwapXY (0x01)
+- Calibration saved to EEPROM (magicVal=0x3AB629D7)
+- Calibration survives reflashing (EEPROM is not erased by mass erase)
 
 ---
 
 ## Backlight
 
-- PWM via TIM4_CH3 (PD14), 1kHz
-- AFIO full remap habilitado (`__HAL_AFIO_REMAP_TIM4_ENABLE()`)
-- Brilho: 100% (`lcd.setBacklightBrightness(100)` em `Src/PanelDue.cpp`)
+- PWM via TIM4_CH3 (PD14), 1 kHz
+- AFIO full remap enabled (`__HAL_AFIO_REMAP_TIM4_ENABLE()`)
+- Brightness: 100% (`lcd.setBacklightBrightness(100)` in `Src/PanelDue.cpp`)
 
 ---
 
-## Toolchain
+## Building from source
 
-```
-/opt/homebrew/Cellar/arm-gcc-bin@10/10.3-2021.10_1/bin/arm-none-eabi-gcc
-```
+**Toolchain:** `arm-none-eabi-gcc 10.3-2021.10`
 
 ```bash
-# Compilar
+# Build
 make
 
-# Gravar
+# Flash
 make flash
-# ou
+# or
 openocd -f interface/stlink.cfg -f target/stm32f1x.cfg \
   -c "program build/MKS-TFT32.bin verify reset exit 0x08000000"
 ```
 
----
-
-## Defines necessários (Makefile)
+**Required Makefile defines:**
 
 ```makefile
 DEFS = -DSTM32F107xC -DMKS_TFT -DILI9328 -DR61505 -DUSE_HAL_DRIVER
@@ -238,11 +238,11 @@ DEFS = -DSTM32F107xC -DMKS_TFT -DILI9328 -DR61505 -DUSE_HAL_DRIVER
 
 ## Status
 
-| Função | Estado |
-|--------|--------|
-| Orientação display | ✓ Correto |
-| Touch | ✓ Funcional (auto-calibração) |
-| Backlight PWM | ✓ Funcional |
-| Comunicação Klipper (PanelDue) | ✓ Configurado |
-| Vivacidade de cores | ✓ Correto — cores vivas, confirmado |
-| Scan lines | ✓ Ausentes |
+| Feature | State |
+|---------|-------|
+| Display orientation | ✓ Correct |
+| Touch | ✓ Working (auto-calibration) |
+| Backlight PWM | ✓ Working |
+| Klipper communication (PanelDue) | ✓ Configured |
+| Color vibrancy | ✓ Vivid colors confirmed |
+| Scan lines | ✓ None |
