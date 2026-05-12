@@ -2,6 +2,8 @@
 
 > [English version](README.md)
 
+![MKS TFT28 V2.0 rodando firmware PanelDue com Klipper](display_working.jpg)
+
 ## Hardware
 
 | Item | Valor |

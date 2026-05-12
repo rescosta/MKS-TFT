@@ -2,6 +2,8 @@
 
 > [Versão em Português](README.pt-br.md)
 
+![MKS TFT28 V2.0 running PanelDue firmware with Klipper](display_working.jpg)
+
 ## Hardware
 
 | Item | Value |
