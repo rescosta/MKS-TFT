@@ -20,17 +20,9 @@
 
 ## Flashing
 
-### Requirements
+### Hardware required
 
-- **Hardware:** ST-Link V2 programmer (cheap clones work fine)
-- **Software:** [OpenOCD](https://openocd.org/)
-  ```bash
-  # macOS
-  brew install openocd
-
-  # Ubuntu/Debian
-  sudo apt install openocd
-  ```
+**ST-Link V2 programmer** — cheap clones (~$5) work fine.
 
 ### SWD wiring
 
@@ -45,16 +37,57 @@ Connect the ST-Link to the SWD header on the board (labeled `SWD` or `JTAG`):
 
 > The board must be **powered on** during flashing.
 
-### Flash command
+---
 
-Run this command in the folder where the `.bin` file is located:
+### Option A — Windows (STM32CubeProgrammer)
+
+1. Download and install [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html) (free, official ST tool)
+2. Connect the ST-Link to USB and to the board
+3. Open STM32CubeProgrammer → select **ST-LINK** → click **Connect**
+4. Go to **Erasing & Programming**
+5. Browse to `MKS-TFT32_voron24_klipper.bin`
+6. Set start address to `0x08000000`
+7. Check **Verify programming** and **Run after programming**
+8. Click **Start Programming**
+
+---
+
+### Option B — macOS / Linux (OpenOCD)
+
+Install OpenOCD:
+```bash
+# macOS
+brew install openocd
+
+# Ubuntu/Debian
+sudo apt install openocd
+```
+
+Run in the folder where the `.bin` file is located:
 
 ```bash
 openocd -f interface/stlink.cfg -f target/stm32f1x.cfg \
   -c "program MKS-TFT32_voron24_klipper.bin verify reset exit 0x08000000"
 ```
 
-Expected output:
+---
+
+### Option C — From the Klipper Raspberry Pi
+
+If the ST-Link is connected to the Pi's USB port, flash directly from the Pi (no separate computer needed):
+
+```bash
+sudo apt install openocd
+cd ~
+wget https://github.com/rescosta/MKS-TFT/raw/r61505-stm32f107-klipper/binaries/MKS-TFT32_voron24_klipper.bin
+openocd -f interface/stlink.cfg -f target/stm32f1x.cfg \
+  -c "program MKS-TFT32_voron24_klipper.bin verify reset exit 0x08000000"
+```
+
+---
+
+### Expected output (Options B and C)
+
 ```
 ** Programming Started **
 ** Programming Finished **
@@ -65,7 +98,7 @@ Expected output:
 
 If you see `Verified OK`, the board resets automatically and the PanelDue interface appears on the display.
 
-> **Important:** always use OpenOCD with the `program` command — do **not** use `st-flash` directly. It has known issues with the STM32F107 and may report success without actually flashing.
+> **Important:** do **not** use `st-flash` directly — it has known issues with the STM32F107 and may report success without actually flashing.
 
 ---
 

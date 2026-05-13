@@ -20,17 +20,9 @@
 
 ## Como gravar
 
-### Requisitos
+### Hardware necessário
 
-- **Hardware:** programador ST-Link V2 (clones baratos funcionam)
-- **Software:** [OpenOCD](https://openocd.org/)
-  ```bash
-  # macOS
-  brew install openocd
-
-  # Ubuntu/Debian
-  sudo apt install openocd
-  ```
+**Programador ST-Link V2** — clones baratos (~R$20) funcionam bem.
 
 ### Conexão SWD
 
@@ -45,7 +37,31 @@ Conecte o ST-Link no conector SWD da placa (marcado como `SWD` ou `JTAG`):
 
 > A placa precisa estar **ligada** durante a gravação.
 
-### Comando
+---
+
+### Opção A — Windows (STM32CubeProgrammer)
+
+1. Baixe e instale o [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html) (gratuito, ferramenta oficial da ST)
+2. Conecte o ST-Link no USB e na placa
+3. Abra o STM32CubeProgrammer → selecione **ST-LINK** → clique em **Connect**
+4. Vá em **Erasing & Programming**
+5. Selecione o arquivo `MKS-TFT32_voron24_klipper.bin`
+6. Defina o endereço inicial como `0x08000000`
+7. Marque **Verify programming** e **Run after programming**
+8. Clique em **Start Programming**
+
+---
+
+### Opção B — macOS / Linux (OpenOCD)
+
+Instale o OpenOCD:
+```bash
+# macOS
+brew install openocd
+
+# Ubuntu/Debian
+sudo apt install openocd
+```
 
 Execute na pasta onde está o arquivo `.bin`:
 
@@ -54,7 +70,24 @@ openocd -f interface/stlink.cfg -f target/stm32f1x.cfg \
   -c "program MKS-TFT32_voron24_klipper.bin verify reset exit 0x08000000"
 ```
 
-Saída esperada:
+---
+
+### Opção C — Pelo próprio Raspberry Pi do Klipper
+
+Se o ST-Link estiver conectado na USB do Pi, grave diretamente de lá (sem computador separado):
+
+```bash
+sudo apt install openocd
+cd ~
+wget https://github.com/rescosta/MKS-TFT/raw/r61505-stm32f107-klipper/binaries/MKS-TFT32_voron24_klipper.bin
+openocd -f interface/stlink.cfg -f target/stm32f1x.cfg \
+  -c "program MKS-TFT32_voron24_klipper.bin verify reset exit 0x08000000"
+```
+
+---
+
+### Saída esperada (Opções B e C)
+
 ```
 ** Programming Started **
 ** Programming Finished **
@@ -65,7 +98,7 @@ Saída esperada:
 
 Se aparecer `Verified OK`, a placa reinicia automaticamente e a interface PanelDue aparece no display.
 
-> **Importante:** sempre use OpenOCD com o comando `program` — **não use `st-flash` diretamente**. Ele tem problemas conhecidos com o STM32F107 e pode reportar sucesso sem ter gravado corretamente.
+> **Importante:** **não use `st-flash` diretamente** — ele tem problemas conhecidos com o STM32F107 e pode reportar sucesso sem ter gravado corretamente.
 
 ---
 
