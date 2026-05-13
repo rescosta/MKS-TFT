@@ -26,17 +26,20 @@
 
 ### SWD wiring
 
-Connect the ST-Link to the SWD header on the board (labeled `SWD` or `JTAG`):
+Connect the ST-Link to the 6-pin JTAG header on the board (top-right corner, labeled `JTAG`):
 
-| ST-Link | MKS TFT28 |
-|---------|-----------|
-| SWDIO | SWDIO |
-| SWDCLK | SWDCLK |
-| GND | GND |
+| JTAG pin | Signal | ST-Link |
+|----------|--------|---------|
+| 1 | GND | GND |
+| 2 | NRST | — (not needed) |
+| 3 | GND | GND |
+| 4 | JTCK / SWDCLK | SWDCLK |
+| 5 | +3V3 | (see power note below) |
+| 6 | JTMS / SWDIO | SWDIO |
 
 > **Power:** use one source only — never two at the same time:
-> - Board connected to printer → connect only SWDIO, SWDCLK, GND from the ST-Link
-> - Board NOT connected to printer → you may connect ST-Link 3.3V as the power source, but **never connect 5V** (the board is 3.3V only)
+> - Board connected to printer → connect only pins 1, 4, 6 (GND, SWDCLK, SWDIO)
+> - Board NOT connected to printer → also connect pin 5 (+3V3) from ST-Link, but **never connect 5V** (the board is 3.3V only)
 
 ---
 

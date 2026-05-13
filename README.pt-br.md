@@ -26,17 +26,20 @@
 
 ### Conexão SWD
 
-Conecte o ST-Link no conector SWD da placa (marcado como `SWD` ou `JTAG`):
+Conecte o ST-Link no conector JTAG de 6 pinos da placa (canto superior direito, marcado como `JTAG`):
 
-| ST-Link | MKS TFT28 |
-|---------|-----------|
-| SWDIO | SWDIO |
-| SWDCLK | SWDCLK |
-| GND | GND |
+| Pino JTAG | Sinal | ST-Link |
+|-----------|-------|---------|
+| 1 | GND | GND |
+| 2 | NRST | — (não necessário) |
+| 3 | GND | GND |
+| 4 | JTCK / SWDCLK | SWDCLK |
+| 5 | +3V3 | (ver nota de alimentação abaixo) |
+| 6 | JTMS / SWDIO | SWDIO |
 
 > **Alimentação:** use apenas uma fonte — nunca duas ao mesmo tempo:
-> - Placa conectada à impressora → conecte apenas SWDIO, SWDCLK, GND do ST-Link
-> - Placa desconectada da impressora → pode usar o 3.3V do ST-Link como fonte, mas **nunca conecte o 5V** (a placa opera em 3.3V)
+> - Placa conectada à impressora → conecte apenas os pinos 1, 4, 6 (GND, SWDCLK, SWDIO)
+> - Placa desconectada da impressora → pode conectar também o pino 5 (+3V3) do ST-Link, mas **nunca conecte 5V** (a placa opera em 3.3V)
 
 ---
 
