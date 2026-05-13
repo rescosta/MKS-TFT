@@ -20,12 +20,52 @@
 
 ## Como gravar
 
+### Requisitos
+
+- **Hardware:** programador ST-Link V2 (clones baratos funcionam)
+- **Software:** [OpenOCD](https://openocd.org/)
+  ```bash
+  # macOS
+  brew install openocd
+
+  # Ubuntu/Debian
+  sudo apt install openocd
+  ```
+
+### Conexão SWD
+
+Conecte o ST-Link no conector SWD da placa (marcado como `SWD` ou `JTAG`):
+
+| ST-Link | MKS TFT28 |
+|---------|-----------|
+| SWDIO | SWDIO |
+| SWDCLK | SWDCLK |
+| GND | GND |
+| 3.3V | 3.3V |
+
+> A placa precisa estar **ligada** durante a gravação.
+
+### Comando
+
+Execute na pasta onde está o arquivo `.bin`:
+
 ```bash
 openocd -f interface/stlink.cfg -f target/stm32f1x.cfg \
   -c "program MKS-TFT32_voron24_klipper.bin verify reset exit 0x08000000"
 ```
 
-**Importante:** usar OpenOCD com comando `program` — não usar `st-flash` diretamente.
+Saída esperada:
+```
+** Programming Started **
+** Programming Finished **
+** Verify Started **
+** Verified OK **
+** Resetting Target **
+```
+
+Se aparecer `Verified OK`, a placa reinicia automaticamente e a interface PanelDue aparece no display.
+
+> **Importante:** sempre use OpenOCD com o comando `program` — **não use `st-flash` diretamente**. Ele tem problemas conhecidos com o STM32F107 e pode reportar sucesso sem ter gravado corretamente.
 
 ---
 

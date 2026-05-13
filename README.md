@@ -20,12 +20,52 @@
 
 ## Flashing
 
+### Requirements
+
+- **Hardware:** ST-Link V2 programmer (cheap clones work fine)
+- **Software:** [OpenOCD](https://openocd.org/)
+  ```bash
+  # macOS
+  brew install openocd
+
+  # Ubuntu/Debian
+  sudo apt install openocd
+  ```
+
+### SWD wiring
+
+Connect the ST-Link to the SWD header on the board (labeled `SWD` or `JTAG`):
+
+| ST-Link | MKS TFT28 |
+|---------|-----------|
+| SWDIO | SWDIO |
+| SWDCLK | SWDCLK |
+| GND | GND |
+| 3.3V | 3.3V |
+
+> The board must be **powered on** during flashing.
+
+### Flash command
+
+Run this command in the folder where the `.bin` file is located:
+
 ```bash
 openocd -f interface/stlink.cfg -f target/stm32f1x.cfg \
-  -c "program binaries/MKS-TFT32_voron24_klipper.bin verify reset exit 0x08000000"
+  -c "program MKS-TFT32_voron24_klipper.bin verify reset exit 0x08000000"
 ```
 
-> **Important:** use OpenOCD with the `program` command — do **not** use `st-flash` directly.
+Expected output:
+```
+** Programming Started **
+** Programming Finished **
+** Verify Started **
+** Verified OK **
+** Resetting Target **
+```
+
+If you see `Verified OK`, the board resets automatically and the PanelDue interface appears on the display.
+
+> **Important:** always use OpenOCD with the `program` command — do **not** use `st-flash` directly. It has known issues with the STM32F107 and may report success without actually flashing.
 
 ---
 
