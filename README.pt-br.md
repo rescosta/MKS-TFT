@@ -28,6 +28,9 @@
 
 Conecte o ST-Link no conector JTAG de 6 pinos da placa (canto superior direito, marcado como `JTAG`):
 
+![Localização do conector JTAG — vista inferior do PCB MKS TFT32_L V3.0](jtag_pinout.png)
+*Fonte: Esquemático PCB MKS TFT32_L V3.0 (camada inferior)*
+
 | Pino JTAG | Sinal | ST-Link |
 |-----------|-------|---------|
 | 1 | GND | GND |
