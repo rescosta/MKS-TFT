@@ -33,9 +33,8 @@ Connect the ST-Link to the SWD header on the board (labeled `SWD` or `JTAG`):
 | SWDIO | SWDIO |
 | SWDCLK | SWDCLK |
 | GND | GND |
-| 3.3V | 3.3V |
 
-> The board must be **powered on** during flashing.
+> **Warning:** do **not** connect the ST-Link 3.3V or 5V pins to the board. Power the board through its normal printer connector instead. Connecting ST-Link power while the board is already powered can damage both devices.
 
 ---
 

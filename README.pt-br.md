@@ -33,9 +33,8 @@ Conecte o ST-Link no conector SWD da placa (marcado como `SWD` ou `JTAG`):
 | SWDIO | SWDIO |
 | SWDCLK | SWDCLK |
 | GND | GND |
-| 3.3V | 3.3V |
 
-> A placa precisa estar **ligada** durante a gravação.
+> **Atenção:** **não conecte os pinos de 3.3V ou 5V do ST-Link na placa.** Alimente a placa pelo conector normal da impressora. Conectar a alimentação do ST-Link com a placa já energizada pode danificar os dois equipamentos.
 
 ---
 
