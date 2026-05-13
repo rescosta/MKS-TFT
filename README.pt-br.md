@@ -1,4 +1,4 @@
-# MKS TFT28 V2.0 — Firmware PanelDue para Klipper/Voron 2.4
+# MKS TFT28 V2.0 / TFT32_L V3.0 — Firmware PanelDue para Klipper/Voron 2.4
 
 > [English version](README.md)
 
