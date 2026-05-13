@@ -34,7 +34,9 @@ Conecte o ST-Link no conector SWD da placa (marcado como `SWD` ou `JTAG`):
 | SWDCLK | SWDCLK |
 | GND | GND |
 
-> **Atenção:** **não conecte os pinos de 3.3V ou 5V do ST-Link na placa.** Alimente a placa pelo conector normal da impressora. Conectar a alimentação do ST-Link com a placa já energizada pode danificar os dois equipamentos.
+> **Alimentação:** use apenas uma fonte — nunca duas ao mesmo tempo:
+> - Placa conectada à impressora → conecte apenas SWDIO, SWDCLK, GND do ST-Link
+> - Placa desconectada da impressora → pode usar o 3.3V do ST-Link como fonte, mas **nunca conecte o 5V** (a placa opera em 3.3V)
 
 ---
 

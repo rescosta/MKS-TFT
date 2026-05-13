@@ -34,7 +34,9 @@ Connect the ST-Link to the SWD header on the board (labeled `SWD` or `JTAG`):
 | SWDCLK | SWDCLK |
 | GND | GND |
 
-> **Warning:** do **not** connect the ST-Link 3.3V or 5V pins to the board. Power the board through its normal printer connector instead. Connecting ST-Link power while the board is already powered can damage both devices.
+> **Power:** use one source only — never two at the same time:
+> - Board connected to printer → connect only SWDIO, SWDCLK, GND from the ST-Link
+> - Board NOT connected to printer → you may connect ST-Link 3.3V as the power source, but **never connect 5V** (the board is 3.3V only)
 
 ---
 
